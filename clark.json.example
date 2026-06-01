@@ -1,0 +1,23 @@
+{
+  "telegram": {
+    "token": "",
+    "default_chat_id": 0
+  },
+  "deploy": {
+    "host": "127.0.0.1",
+    "port": 8124,
+    "workers": 1,
+    "memory_max": "256M",
+    "cpu_quota": "50%"
+  },
+  "database": {
+    "path": "data/assistant.db"
+  },
+  "modules": {
+    "agenda": { "enabled": true },
+    "notes": { "enabled": true },
+    "reminders": { "enabled": true },
+    "scheduler": { "enabled": true },
+    "uptime": { "enabled": true }
+  }
+}

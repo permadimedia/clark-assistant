@@ -1,0 +1,28 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+.env
+.env.*
+.venv/
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/assistant.pid
+data/cloudflared.log
+data/.gitkeep
+data/clark.log
+data/clark.pid
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Config with secrets (local only — copy from clark.json.example)
+clark.json
+
+# Deploy service (generated from template + clark.json)
+deploy/clark.service
+
+# Auto-generated RAG context (session-specific)
+rag-context.md
