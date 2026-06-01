@@ -34,7 +34,7 @@ Clark is your AI's desk clerk — a REST API backend that handles menial tasks s
 | **Notes** | Save, search (FTS5), update, delete reference notes |
 | **Scheduler** | Cron/interval/once jobs — `send_message`, `send_agenda`, extensible |
 | **Notifier** | Sends Telegram messages via Bot API |
-| **Plugin system** | Lightweight async plugin loader for extensibility |
+| **Module system** | Self-contained feature modules with auto-discovery |
 
 ### What It Is NOT
 
@@ -76,7 +76,7 @@ Talk to [@BotFather](https://t.me/BotFather) on Telegram → `/newbot` → save 
 ### 2. Configure
 
 ```bash
-cd ~/clark
+cd clark-assistant
 cp clark.json.example clark.json
 chmod 600 clark.json
 # Edit clark.json — fill in telegram.token at minimum
@@ -86,8 +86,8 @@ chmod 600 clark.json
 
 ```bash
 uv sync --no-dev
-mkdir -p data
-./scripts/start-assistant.sh
+python cli.py start
+# Or: ./start-clark.sh
 ```
 
 ### 4. Verify
@@ -114,8 +114,8 @@ curl -X POST http://localhost:8124/api/reload
 | Method | Route | Description |
 |--------|-------|-------------|
 | `GET` | `/api/health` | Basic health check |
-| `GET` | `/api/health/detailed` | Plugin-level health |
-| `GET` | `/api/plugins` | List loaded plugins |
+| `GET` | `/api/health/detailed` | Module-level health |
+| `GET` | `/api/modules` | List registered modules |
 
 ### Reminders
 
@@ -130,7 +130,7 @@ curl -X POST http://localhost:8124/api/reload
 ```bash
 curl -X POST http://localhost:8124/api/reminders \
   -H "Content-Type: application/json" \
-  -d '{"text": "Team standup", "time": "2026-06-02T09:00:00+07:00", "alerts": [15, 5]}'
+  -d '{"text": "Team standup", "time": "2026-06-02T09:00:00+07:00", "alert_before_minutes": 10}'
 ```
 
 ### Agenda
@@ -215,21 +215,14 @@ All config lives in a single JSON file. No `.env`.
     "default_chat_id": 123456789
   },
   "database": {
-    "path": "data/clark.db"
+    "path": "data/assistant.db"
   },
   "modules": {
     "reminders": { "enabled": true },
     "notes": { "enabled": true },
     "agenda": { "enabled": true },
-    "scheduler": {
-      "enabled": true,
-      "agenda_morning": { "schedule": "0 6 * * *", "range": "today" },
-      "agenda_evening": { "schedule": "0 16 * * *", "range": "tomorrow" }
-    },
-    "weather": {
-      "enabled": false,
-      "city": "Jakarta"
-    }
+    "scheduler": { "enabled": true },
+    "uptime": { "enabled": true }
   }
 }
 ```
