@@ -10,7 +10,6 @@ data/*.db-shm
 data/*.db-wal
 data/assistant.pid
 data/cloudflared.log
-data/.gitkeep
 data/clark.log
 data/clark.pid
 .idea/

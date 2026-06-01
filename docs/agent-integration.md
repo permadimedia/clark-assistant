@@ -100,17 +100,17 @@ Tables render poorly on mobile Telegram and WhatsApp. Use bullet lists instead.
 - BAD (table — unreadable on mobile):
   | ⏰ | Acara | Peserta |
   |----|-------|---------|
-  | 09:00 | Leadership Talk | All Karyawan TR3 |
-  | 13:30 | Diskusi TIF3 | EVP TR3, SM BPPLP |
+  | 09:00 | Team Standup | Engineering |
+  | 14:00 | Client Demo | Product, Sales |
 
 + GOOD (bullet list — readable everywhere):
-+ ⏰ 09.00 — Leadership Talk #2
-+ 👥 All Karyawan TR3
++ ⏰ 09.00 — Team Standup
++ 👥 Engineering
 + 🖇️ Notifikasi jam 08.50
 +
-+ ⏰ 13.30 — Diskusi Operasional TIF3 & TR3
-+ 👥 EVP TR3, SM BPPLP, SM RSO
-+ 🖇️ Notifikasi jam 13.20
++ ⏰ 14.00 — Client Demo
++ 👥 Product, Sales
++ 🖇️ Notifikasi jam 13.50
 ```
 
 ### Platform-Specific
@@ -216,14 +216,13 @@ curl -X POST http://localhost:8124/api/reminders \
 
 **Notification format:**
 ```
-🔔 📋 Update Terbatas             ← first line bold (title)
-👥 EVP, SM BPPLP, SM SSGS        ← details normal weight
-🥼 Corporate Navy
-🏢 RWG Lt.11 TLT Surabaya
-🖇️ link
-📌 1. Update Mansol by RSO
+🔔 📋 Sprint Review              ← first line bold (title)
+👥 Product, Engineering, Design  ← details normal weight
+🏢 Meeting Room B
+🖇️ https://meet.google.com/abc-defg-hij
+📌 1. Demo completed features
 
-⏰ 11:40
+⏰ 14:00
 ━━━━━━━━━━━━━━━━
 🦊 clark                          ← footer, not ai-assistant-light
 ```
@@ -318,7 +317,7 @@ The agent can save reference information and retrieve it later:
 # Save
 curl -X POST http://localhost:8124/api/notes \
   -H "Content-Type: application/json" \
-  -d '{"text": "Server IP: 192.168.1.100 — SSH key in ~/.ssh/id_rsa"}'
+  -d '{"text": "Remember to review pull request before Friday"}'
 
 # Search
 curl -s "http://localhost:8124/api/notes/search?q=server+ip"

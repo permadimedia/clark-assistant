@@ -33,7 +33,7 @@ Sangkuni: "I'll ask clark what's on your agenda."
           → GET /api/agenda?range=today
 
 Sangkuni: "Let me clark that note."
-          → POST /api/notes { text: "Server IP: 192.168.1.100" }
+          → POST /api/notes { text: "Meeting notes from standup"
 
 Sangkuni: "Enable weather for Jakarta at 06:00."
           → Edit clark.json → POST /api/reload

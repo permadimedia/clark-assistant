@@ -11,7 +11,7 @@ Sangkuni: "Let me ask clark to create a reminder."
            POST /api/reminders { text: "Meeting 10:00", time: "10:00" }
 
 Sangkuni: "Let me clark that note."
-           POST /api/notes { text: "Server IP: 192.168.1.100" }
+           POST /api/notes { text: "Meeting notes from standup"
 
 Sangkuni: "I'll ask clark about your agenda."
            GET /api/agenda?range=today

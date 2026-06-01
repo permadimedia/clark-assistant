@@ -53,15 +53,15 @@ When presenting clark data to users (especially on Telegram, WhatsApp, Discord):
 
 Good:
 ```
-⏰ 09.00 — Leadership Talk #2
-👥 All Karyawan TR3
+⏰ 09.00 — Daily Standup
+👥 Engineering Team
 🏢 Online
 ```
 
 Bad:
 ```
 | Time | Event | Participants |
-| 09:00 | Leadership Talk | All Karyawan TR3 |
+| 09:00 | Daily Standup | Engineering Team |
 ```
 
 ### 4. Check Before Use
