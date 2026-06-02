@@ -120,17 +120,7 @@ All settings in one JSON file. No `.env`. No scattered config.
     "reminders": { "enabled": true },
     "notes": { "enabled": true },
     "agenda": { "enabled": true },
-    "scheduler": {
-      "enabled": true,
-      "agenda_morning": {
-        "schedule": "0 6 * * *",
-        "range": "today"
-      },
-      "agenda_evening": {
-        "schedule": "0 16 * * *",
-        "range": "tomorrow"
-      }
-    },
+    "scheduler": { "enabled": true },
     "weather": {
       "enabled": false,
       "city": "Jakarta"

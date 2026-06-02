@@ -141,17 +141,7 @@ All config lives in a single `clark.json` file. No `.env`. One file, readable by
     "reminders": { "enabled": true },
     "notes": { "enabled": true },
     "agenda": { "enabled": true },
-    "scheduler": {
-      "enabled": true,
-      "agenda_morning": {
-        "schedule": "0 6 * * *",
-        "range": "today"
-      },
-      "agenda_evening": {
-        "schedule": "0 16 * * *",
-        "range": "tomorrow"
-      }
-    },
+    "scheduler": { "enabled": true },
     "weather": {
       "enabled": false,
       "city": "Jakarta"
