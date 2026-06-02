@@ -135,7 +135,7 @@ All config lives in a single `clark.json` file. No `.env`. One file, readable by
     "default_chat_id": 123456789
   },
   "database": {
-    "path": "data/clark.db"
+    "path": "data/assistant.db"
   },
   "modules": {
     "reminders": { "enabled": true },
@@ -149,6 +149,12 @@ All config lives in a single `clark.json` file. No `.env`. One file, readable by
   }
 }
 ```
+
+> **⚠️ Config vs Scheduled Jobs**
+> `clark.json` is for **runtime settings** only (token, module toggles, DB path).
+> It does **not** auto-create scheduled jobs. To set up recurring agenda
+> delivery, agents must create cron jobs via `POST /api/scheduler/jobs`.
+> See [Scheduler Patterns](#scheduler-patterns) below.
 
 ### Agent Workflow for Config Changes
 

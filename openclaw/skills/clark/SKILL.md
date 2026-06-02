@@ -72,6 +72,29 @@ python cli.py status   # or ./status-clark.sh
 ```
 Only proceed if status shows `API: healthy`.
 
+### 5. Config Does Not Create Jobs
+
+**`clark.json` is for runtime settings only** (token, module toggles, DB path).
+It does **not** auto-create scheduled jobs.
+
+To set up recurring agenda delivery, you must explicitly create cron jobs
+via the Scheduler API:
+
+```bash
+# Morning agenda (06:00 WIB) — today's agenda
+curl -X POST http://localhost:8124/api/scheduler/jobs \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Agenda Pagi","job_type":"send_agenda","schedule_type":"cron","schedule_config":{"cron":"0 6 * * *","tz":"Asia/Jakarta"},"payload":{"chat_id":123456789,"range":"today"}}'
+
+# Evening agenda (16:00 WIB) — tomorrow's agenda
+curl -X POST http://localhost:8124/api/scheduler/jobs \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Agenda Sore","job_type":"send_agenda","schedule_type":"cron","schedule_config":{"cron":"0 16 * * *","tz":"Asia/Jakarta"},"payload":{"chat_id":123456789,"range":"tomorrow"}}'
+```
+
+Once created, these jobs persist in the database and run forever —
+the agent does not need to recreate them on every session.
+
 ## API Reference
 
 Base URL: `http://localhost:8124`
