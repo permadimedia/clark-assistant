@@ -167,26 +167,33 @@ Email module reads **only metadata** (from, subject, date, snippet).
 No body content, no attachments, no sent messages.
 
 ```bash
-# Check connection & last scan status
+# Check connection + DB stats + recent scan history
 GET /api/email/status
 
-# Trigger instant scan → classify → notify Telegram
+# Trigger scan → classify → dedup → store → notify Telegram
 POST /api/email/scan
+
+# Search tracked emails instantly (local DB, no API call)
+GET /api/email/search?q=keyword
+
+# Mark pending new items as notified (call after presenting)
+POST /api/email/notified
 
 # Execute cleanup: archive old emails, delete old drafts
 POST /api/email/cleanup
 ```
 
 **Agent rules for email:**
-1. Always call `POST /api/email/scan` fresh when user asks — don't rely on cached data.
-2. Filter results using a targeted Python script — parse sender, subject, date from the inbox.
-3. Respect read-only mode: don't offer cleanup/delete unless user explicitly asks.
-4. Default scope is `gmail.metadata` — no body content available.
-5. **Never** commit email credentials or tokens to git — credentials live at `~/.config/email/`.
+1. **New items only**: After `POST /api/email/scan`, the summary shows only first-seen items in 🆕 NEW section. Older unread items appear in 📌 OLDER UNREAD section.
+2. **Mark notified**: Call `POST /api/email/notified` after presenting results so duplicates don't appear next scan.
+3. **Use local search**: For targeted queries about specific senders, use `GET /api/email/search?q=keyword` — instant, no API call.
+4. Respect read-only mode: don't offer cleanup/delete unless user explicitly asks.
+5. Default scope is `gmail.metadata` — no body content available.
+6. **Never** commit email credentials or tokens to git — credentials live at `~/.config/email/`.
 
 **Approved reporting format (Telegram-friendly):**
 
-When user asks about specific emails, present results like this:
+When user asks about specific emails, use the search endpoint and present results:
 
 ```
 📬 Email Query — [Search Keyword]
@@ -258,6 +265,12 @@ when the user asks about specific emails.
 **Provider-agnostic:** Current implementation uses Gmail API with `gmail.metadata`
 scope. Future: IMAP, Outlook Graph, Proton Bridge.
 
+**Email tracking:**
+- Separate SQLite database at `~/.clark/email.db` (not coupled to core clark DB)
+- Dedup by `message_id`: first scan = new; subsequent scans = seen
+- Scan audit trail in `email_scan_log` table (duration, counts, errors)
+- Local search queries this DB — instant results, no API call
+
 **Label strategy (when write mode is enabled):**
 
 | Priority (visible in inbox) | Archive (skip inbox) |
@@ -276,6 +289,7 @@ scope. Future: IMAP, Outlook Graph, Proton Bridge.
       "provider": "gmail",
       "credentials_path": "~/.config/email/credentials.json",
       "token_path": "~/.config/email/token.json",
+      "db_path": "~/.clark/email.db",
       "scan_schedule": "0 11 * * *",
       "scan_limit": 50,
       "chat_id": 0,
