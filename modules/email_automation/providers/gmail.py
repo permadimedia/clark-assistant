@@ -91,9 +91,40 @@ class GmailProvider(EmailProvider):
                 flow = InstalledAppFlow.from_client_secrets_file(
                     str(self._creds_path), scopes
                 )
-                # Run local server flow for OAuth consent
-                creds = flow.run_local_server(port=0)
-                logger.info("Gmail OAuth consent completed")
+
+                # Detect headless — use console auth if no display available
+                import os as _os
+                has_display = bool(
+                    _os.environ.get("DISPLAY") or _os.environ.get("WAYLAND_DISPLAY")
+                )
+
+                if has_display:
+                    creds = flow.run_local_server(port=0)
+                    logger.info("Gmail OAuth consent completed (browser)")
+                else:
+                    import urllib.parse
+
+                    # Use out-of-band redirect URI for console-based flow
+                    oob_uri = "urn:ietf:wg:oauth:2.0:oob"
+                    flow.redirect_uri = oob_uri
+
+                    auth_url, _ = flow.authorization_url(
+                        access_type="offline",
+                        include_granted_scopes="true",
+                        prompt="consent",
+                    )
+                    print("\n" + "=" * 60)
+                    print("🌐 OPEN THIS URL IN YOUR BROWSER (phone/laptop):")
+                    print("=" * 60)
+                    print(auth_url)
+                    print("=" * 60)
+                    print("\nAfter authenticating, Google will show you a code.")
+                    print("Copy that code and paste it below.")
+                    print("(You may need to click 'Copy' on the Google page)\n")
+                    code = input("Paste authorization code: ").strip()
+                    flow.fetch_token(code=code)
+                    creds = flow.credentials
+                    logger.info("Gmail OAuth consent completed (console)")
 
             # Save token for next session
             self._token_path.parent.mkdir(parents=True, exist_ok=True)
@@ -143,7 +174,7 @@ class GmailProvider(EmailProvider):
             results = self._service.users().messages().list(
                 userId=self._user_id,
                 maxResults=limit,
-                q="in:inbox",
+                labelIds=["INBOX"],
                 fields="messages(id)",
             ).execute()
 
@@ -179,28 +210,35 @@ class GmailProvider(EmailProvider):
             return []
 
         try:
-            results = self._service.users().messages().list(
+            # Use dedicated drafts.list endpoint (metadata scope compatible)
+            results = self._service.users().drafts().list(
                 userId=self._user_id,
                 maxResults=limit,
-                q="in:drafts",
-                fields="messages(id)",
             ).execute()
 
-            draft_ids = [m["id"] for m in results.get("messages", [])]
-            if not draft_ids:
+            # Drafts endpoint returns draft objects with id + message nested
+            draft_items = results.get("drafts", [])
+            if not draft_items:
                 return []
 
             messages = []
-            for d_id in draft_ids:
-                msg = self._service.users().messages().get(
+            for item in draft_items:
+                msg_id = item.get("id", "")
+                if not msg_id:
+                    continue
+                # Fetch full draft message with metadata
+                msg = self._service.users().drafts().get(
                     userId=self._user_id,
-                    id=d_id,
+                    id=msg_id,
                     format="metadata",
                     metadataHeaders=["From", "Subject", "Date"],
-                    fields="id,labelIds,snippet,internalDate,payload/headers",
                 ).execute()
 
-                email = self._parse_message(msg, is_draft=True)
+                # The message payload is nested under msg["message"]
+                inner = msg.get("message", {})
+                if not inner.get("id"):
+                    continue
+                email = self._parse_message(inner, is_draft=True)
                 if email:
                     messages.append(email)
 
@@ -281,20 +319,28 @@ class GmailProvider(EmailProvider):
     # ── Storage info ────────────────────────────────────────
 
     async def get_storage_info(self) -> dict:
-        """Get Gmail storage quota."""
+        """Get Gmail mailbox stats — messages & threads count.
+
+        Note: storageQuota is not available with gmail.metadata scope.
+        Returns message count as a proxy for mailbox size.
+        """
         if not self._service:
             return {"used_bytes": 0, "total_bytes": 0}
 
         try:
             profile = self._service.users().getProfile(
                 userId=self._user_id,
-                fields="emailAddress,messagesTotal,threadsTotal,historyId,storageQuota",
+                fields="emailAddress,messagesTotal,threadsTotal",
             ).execute()
 
-            quota = profile.get("storageQuota", {})
+            msg_count = int(profile.get("messagesTotal", 0))
+            # Approximate: ~5 KB per message average
+            approx_bytes = msg_count * 5120
             return {
-                "used_bytes": int(quota.get("usage", 0)),
-                "total_bytes": int(quota.get("limit", 15 * 1024**3)),  # Default 15 GB
+                "used_bytes": approx_bytes,
+                "total_bytes": 15 * 1024**3,  # 15 GB default Gmail quota
+                "messages_total": msg_count,
+                "threads_total": int(profile.get("threadsTotal", 0)),
             }
         except Exception as e:
             logger.warning("Failed to get storage info: %s", e)
