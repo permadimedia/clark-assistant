@@ -20,8 +20,10 @@ _PRIORITY_DOMAINS: dict[str, str] = {
 
 # Social media domains
 _SOCIAL_DOMAINS = [
-    "facebook.com", "fb.com", "linkedin.com", "twitter.com",
-    "x.com", "instagram.com", "tiktok.com", "youtube.com",
+    "facebook.com", "facebookmail.com", "fb.com", "fbmail.com",
+    "linkedin.com", "e.linkedin.com",
+    "twitter.com", "x.com",
+    "instagram.com", "tiktok.com", "youtube.com",
     "github.com", "medium.com", "reddit.com", "pinterest.com",
 ]
 

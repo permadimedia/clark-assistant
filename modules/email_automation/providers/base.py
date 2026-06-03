@@ -31,9 +31,13 @@ class EmailMessage:
 
     @property
     def is_bulk(self) -> bool:
-        """Check if likely a bulk/newsletter sender."""
-        return any(self.from_email.startswith(f"{p}+") for p in
-                   ("noreply", "no-reply", "notification", "mail", "newsletter"))
+        """Check if likely a bulk/newsletter sender based on local-part prefix."""
+        local = self.from_email.split("@", 1)[0].lower() if "@" in self.from_email else ""
+        prefixes = ("noreply", "no-reply", "notification", "mail", "newsletter")
+        for p in prefixes:
+            if local.startswith(p):
+                return True
+        return False
 
 
 class EmailProvider(ABC):
