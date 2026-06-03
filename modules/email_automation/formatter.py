@@ -153,3 +153,133 @@ def _priority_label_keys() -> set[str]:
 
 def _archive_label_keys() -> set[str]:
     return {"archive_promo", "archive_newsletter", "archive_social", "archive_notifications"}
+
+
+# ── New notification format (DB-backed) ────────────────────
+
+
+def format_new_notifications(
+    new_items: list[dict],
+    older_unread: list[dict],
+    stats: dict,
+    scan_time: str = "",
+    user_name: str = "User",
+) -> str:
+    """Format scan results with NEW / OLDER UNREAD / summary sections.
+
+    Args:
+        new_items: DB rows with is_new=1, notified=0 (from get_new_unnotified).
+        older_unread: DB rows with is_read=0, is_new=0 (from get_older_unread).
+        stats: Daily stats dict (total_tracked, new_unnotified, older_unread, read).
+        scan_time: Human-readable scan timestamp.
+        user_name: Display name.
+
+    Returns:
+        Formatted Telegram message string.
+    """
+    now = datetime.now(WIB)
+    date_str = now.strftime("%a, %b %d, %Y")
+
+    lines = [
+        f"📬 Email Daily — {user_name}, {date_str}",
+        "",
+    ]
+
+    # ── NEW section ────────────────────────────────────────
+    if new_items:
+        lines.append(f"🆕 NEW — {len(new_items)} email{'s' if len(new_items) != 1 else ''}")
+        lines.append("")
+        _append_grouped_rows(lines, new_items, show_new_badge=False)
+    else:
+        lines.append("🆕 No new emails since last scan")
+
+    lines.append("")
+
+    # ── OLDER UNREAD section ───────────────────────────────
+    if older_unread:
+        lines.append(f"📌 OLDER UNREAD — {len(older_unread)} email{'s' if len(older_unread) != 1 else ''}")
+        lines.append("")
+        _append_grouped_rows(lines, older_unread, show_new_badge=False)
+
+    # ── Summary footer ─────────────────────────────────────
+    lines.append("━" * 25)
+    lines.append(f"📊 {stats.get('new_unnotified', 0)} new · {stats.get('older_unread', 0)} unread · {stats.get('read', 0)} read")
+    if scan_time:
+        lines.append(f"Last scan: {scan_time}")
+    lines.append("")
+    lines.append("📌 /scan to refresh · /email search [keyword]")
+    lines.append("🦊 <i>clark</i>")
+
+    return "\n".join(lines)
+
+
+def _append_grouped_rows(lines: list[str], items: list[dict], show_new_badge: bool = False) -> None:
+    """Append formatted email rows grouped by label_key."""
+    from collections import defaultdict
+
+    groups: dict[str, list[dict]] = defaultdict(list)
+    for item in items:
+        label = item.get("label_key", "") or "unclassified"
+        groups[label].append(item)
+
+    # Order: priority labels first, then the rest
+    label_order = [
+        "priority_security",
+        "priority_billing",
+        "priority_user_account",
+        "followup",
+        "archive_notifications",
+        "archive_promo",
+        "archive_social",
+        "archive_newsletter",
+    ]
+    sorted_keys = sorted(groups, key=lambda k: label_order.index(k) if k in label_order else 99)
+
+    for i, label_key in enumerate(sorted_keys):
+        group_items = groups[label_key]
+        label_def = LABELS.get(label_key)
+        emoji = label_def.emoji if label_def else "📄"
+        group_name = label_def.name.split("/")[-1] if label_def else label_key.replace("_", " ").title()
+
+        # Section header
+        lines.append(f"{emoji} {group_name}")
+
+        for item in group_items:
+            time_str = _format_time_str(item.get("received_at", ""))
+            sender = item.get("from_name", "") or item.get("from_email", "")
+            subject = item.get("subject", "(no subject)")
+            snippet = item.get("snippet", "")
+
+            lines.append(f"  from: {sender}")
+            lines.append(f"  {subject}")
+            if time_str:
+                lines.append(f"  📅 {time_str}")
+            if snippet:
+                # Truncate snippet to avoid line-noise
+                s = snippet[:100]
+                lines.append(f"  💬 {s}")
+            lines.append("")
+
+        if i < len(sorted_keys) - 1:
+            lines.append("")
+
+
+def _format_time_str(received_at: str | None) -> str:
+    """Format an ISO-8601 datetime string for display."""
+    if not received_at:
+        return ""
+    try:
+        dt = datetime.fromisoformat(received_at)
+        local = dt.astimezone(WIB)
+        now = datetime.now(WIB)
+        if local.date() == now.date():
+            return f"Today {local.strftime('%H:%M')}"
+        delta = now - local
+        if delta.days == 1 and delta.total_seconds() < 48 * 3600:
+            return f"Yesterday {local.strftime('%H:%M')}"
+        elif delta.days < 7:
+            return local.strftime("%a %H:%M")
+        else:
+            return local.strftime("%b %d, %H:%M")
+    except Exception:
+        return received_at

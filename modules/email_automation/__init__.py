@@ -21,6 +21,7 @@ class EmailAutomationModule(Module):
         "provider": "gmail",
         "credentials_path": "~/.config/email/credentials.json",
         "token_path": "~/.config/email/token.json",
+        "db_path": "~/.clark/email.db",
         "scan_schedule": "0 7 * * *",
         "scan_limit": 50,
         "chat_id": 0,
@@ -49,13 +50,17 @@ class EmailAutomationModule(Module):
         # Register module reference for handler/route access
         app.state.email_automation_module = self
 
+        from modules.email_automation.database import EmailDatabase
+
         merged = self.config
+        db_path = merged.get("db_path", "data/email.db")
         self._engine = EmailEngine(
             provider_type=merged.get("provider", "gmail"),
             credentials_path=merged.get("credentials_path", "~/.config/email/credentials.json"),
             token_path=merged.get("token_path", "~/.config/email/token.json"),
             scan_limit=merged.get("scan_limit", 50),
             read_only=merged.get("read_only", True),
+            db=EmailDatabase(db_path),
         )
         logger.info("EmailAutomation module loaded (provider=%s, read_only=%s)", merged.get("provider"), merged.get("read_only"))
 

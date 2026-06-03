@@ -24,6 +24,7 @@
       "provider": "gmail",
       "credentials_path": "~/.config/email/credentials.json",
       "token_path": "~/.config/email/token.json",
+      "db_path": "~/.clark/email.db",
       "scan_schedule": "0 7 * * *",
       "scan_limit": 50,
       "chat_id": 0,

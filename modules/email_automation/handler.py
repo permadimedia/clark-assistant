@@ -51,6 +51,12 @@ async def handle_daily_scan(job: CronJob) -> str:
             ok = await send_message(summary, chat_id=chat_id)
             if not ok:
                 logger.warning("Daily scan: notification send failed")
+            else:
+                # Mark all new items as notified so they don't re-appear
+                new_items = await engine.db.get_new_unnotified(provider=engine.provider_type)
+                ids = [r["message_id"] for r in new_items]
+                await engine.mark_notified(ids)
+                logger.info("Marked %d new emails as notified", len(ids))
 
         total = result.get("total", 0)
         priority = result.get("priority_count", 0)

@@ -12,6 +12,7 @@ class EmailMessage:
     Privacy-first design: only what's needed for classification and notification.
     """
     id: str                                  # Provider-specific message ID
+    thread_id: str = ""                      # Thread/conversation ID
     from_name: str | None = None             # Display name of sender
     from_email: str = ""                     # Sender email address
     subject: str = ""                        # Subject line

@@ -397,6 +397,7 @@ class GmailProvider(EmailProvider):
 
             return EmailMessage(
                 id=msg_id,
+                thread_id=msg.get("threadId", ""),
                 from_name=from_name,
                 from_email=from_email,
                 subject=subject,
