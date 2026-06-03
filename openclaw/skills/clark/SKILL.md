@@ -177,19 +177,39 @@ POST /api/email/scan
 POST /api/email/cleanup
 ```
 
-**Example — user asks about specific emails:**
-```bash
-# Agent calls /scan to get latest data
-curl -X POST http://localhost:8124/api/email/scan
-# → Returns summary + notification text
-# Agent filters by sender/subject in the response
-```
-
 **Agent rules for email:**
-1. Always call `/api/email/scan` fresh when user asks about email — don't rely on cached data.
-2. Filter results by sender or subject in the response, don't re-read raw JSON.
+1. Always call `POST /api/email/scan` fresh when user asks — don't rely on cached data.
+2. Filter results using a targeted Python script — parse sender, subject, date from the inbox.
 3. Respect read-only mode: don't offer cleanup/delete unless user explicitly asks.
 4. Default scope is `gmail.metadata` — no body content available.
+5. **Never** commit email credentials or tokens to git — credentials live at `~/.config/email/`.
+
+**Approved reporting format (Telegram-friendly):**
+
+When user asks about specific emails, present results like this:
+
+```
+📬 Email Query — [keyword/company]
+
+[emoji] [Company/Sender Group] — [N] email found
+
+• [Sender Name]
+  [Subject line, full]
+  📅 [Day] [Date], [Time]
+
+• [Sender Name]
+  [Subject line, full]
+  📅 [Day] [Date], [Time]
+```
+
+Rules for the report:
+- **No markdown tables** — use bullet lists with indentation
+- **No code blocks** for the email content — plain text
+- **Sender name** in italic or plain (bold not needed)
+- **Subject** full, never truncated
+- Group by sender/domain when multiple emails from the same source
+- Use emoji sparingly: 📬 header, 🏦 bank, 💻 tech, 🏢 company, 📅 date
+- If no results: *"[Keyword] — Tidak ada"* — simple, no fuss
 
 **Daily scheduled scan:**
 ```bash
