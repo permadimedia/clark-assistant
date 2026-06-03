@@ -98,16 +98,7 @@ def classify(message: EmailMessage) -> Optional[str]:
         if soc_domain in domain:
             return "archive_social"
 
-    # 2. Priority domain overrides
-    if domain in _priority_domains():
-        return _priority_domains()[domain]
-
-    # 3. Followup detection (reply needed)
-    if re.match(r"^re:", subject_lower, re.IGNORECASE):
-        if not message.is_bulk:
-            return "followup"
-
-    # 4. Subject keyword matching
+    # 2. Subject keyword matching (before domain fallback — catches security from notification domains)
     for rule in _subject_rules():
         label_key = rule.get("label_key", "")
         patterns = rule.get("patterns", [])
@@ -118,6 +109,15 @@ def classify(message: EmailMessage) -> Optional[str]:
             except re.error:
                 logger.warning("Invalid regex pattern: '%s' in rule '%s'", pattern, label_key)
                 continue
+
+    # 3. Followup detection (reply needed)
+    if re.match(r"^re:", subject_lower, re.IGNORECASE):
+        if not message.is_bulk:
+            return "followup"
+
+    # 4. Priority domain overrides (fallback)
+    if domain in _priority_domains():
+        return _priority_domains()[domain]
 
     # 5. Bulk sender fallback
     if message.is_bulk:
