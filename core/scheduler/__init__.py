@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 
 # Fallback poll if no jobs exist — 5 minutes (human-like rhythm)
 # Past-due catch-up handles reminders missed during downtime.
-NO_JOB_POLL_S = 300
+NO_JOB_POLL_S = 120   # 2 min — no job? re-check soon
+MAX_SLEEP_S = 120      # 2 min max — prevents missing freshly-inserted earlier jobs
 
 
 class SchedulerManager:
@@ -69,12 +70,19 @@ class SchedulerManager:
             logger.exception("Scheduler loop crashed: %s", e)
 
     async def _tick(self):
-        """One iteration: calculate sleep, execute due jobs, repeat."""
+        """One iteration: calculate sleep, execute due jobs, repeat.
+
+        Sleep is capped at MAX_SLEEP_S to ensure newly-inserted jobs with
+        earlier run times are not missed (see scheduler sleep bug fix).
+        """
         now = datetime.now(timezone.utc)
         next_job = await self._store.get_next_due(now)
 
         if next_job and next_job.next_run_at:
-            sleep_seconds = (next_job.next_run_at - now).total_seconds()
+            sleep_seconds = min(
+                (next_job.next_run_at - now).total_seconds(),
+                MAX_SLEEP_S,
+            )
             if sleep_seconds > 0:
                 await asyncio.sleep(sleep_seconds)
 
