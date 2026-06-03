@@ -189,27 +189,30 @@ POST /api/email/cleanup
 When user asks about specific emails, present results like this:
 
 ```
-📬 Email Query — [keyword/company]
+📬 Email Query — [Search Keyword]
 
-[emoji] [Company/Sender Group] — [N] email found
+🏢 [Company Name] — N email found
 
-• [Sender Name]
-  [Subject line, full]
-  📅 [Day] [Date], [Time]
+• Sender Name
+  Subject line in full, never truncated
+  📅 Day Date, Time
 
-• [Sender Name]
-  [Subject line, full]
-  📅 [Day] [Date], [Time]
+• Sender Name
+  Subject line in full, never truncated
+  📅 Day Date, Time
+
+💻 Another Company — No results
 ```
 
 Rules for the report:
 - **No markdown tables** — use bullet lists with indentation
 - **No code blocks** for the email content — plain text
-- **Sender name** in italic or plain (bold not needed)
+- **Sender name** italic or plain, never bold
 - **Subject** full, never truncated
-- Group by sender/domain when multiple emails from the same source
-- Use emoji sparingly: 📬 header, 🏦 bank, 💻 tech, 🏢 company, 📅 date
-- If no results: *"[Keyword] — Tidak ada"* — simple, no fuss
+- Group by sender/domain when multiple emails from same source
+- Use emoji sparingly: 📬 header, 🏦 finance, 💻 tech, 🏢 company, 📅 date
+- If no results: "[Keyword] — No results" — simple, no fuss
+- **Never use real user data** in the template — use generic placeholders (e.g. "Sender Name", "Company Name")
 
 **Daily scheduled scan:**
 ```bash
