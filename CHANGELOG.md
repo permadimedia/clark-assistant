@@ -2,6 +2,71 @@
 
 ---
 
+## v0.7.0 (2026-06-03)
+
+### New: Email Automation Module (Phase 1)
+
+Full inbox scanning, classification, and Telegram notification module.
+Provider-agnostic — first implementation uses Gmail API (`gmail.metadata` scope).
+
+#### Module Structure
+- `EmailEngine` — orchestrator: connect → scan → classify → notify
+- `EmailMessage` dataclass — metadata only (from, subject, date, snippet)
+- `GmailProvider` — OAuth 2.0, token refresh, inbox/draft listing
+- `classifier.py` — rule-based classification by subject keywords + sender domain
+- `formatter.py` — Telegram-friendly notification text
+- `labels.py` — label definitions (priority: `!`, archive: `_`)
+- `routes.py` — 5 REST endpoints
+- `handler.py` — daily scheduler job handler
+- `classifier_rules.json` — editable rules separate from code
+
+#### Email Tracking Database
+- Self-contained SQLite at `~/.clark/email.db` (not coupled to core clark DB)
+- `email_messages` table: tracks message_id, is_new, notified, first/last seen, classification
+- `email_scan_log` table: audit trail with duration, counts, errors
+- Dedup by message_id: first scan = new; subsequent scans = seen
+- Local search queries this DB (instant, no API call)
+
+#### Smart Notifications
+- Only first-seen items in 🆕 NEW section; older unread in 📌 OLDER UNREAD
+- Priority ordering: security > billing > account > followup > archive
+- Summary footer with counts
+- Once notified, messages are marked and don't re-appear
+
+#### Improved Classifier (Trained on 50 Real Emails)
+- English + Indonesian keywords (voucher, diskon, pembayaran, berhasil, kode verifikasi)
+- GitHub token/2FA emails correctly classified as priority_security
+- Subject keywords checked before domain fallback
+- 0 unclassified in sample (50/50 labeled)
+
+#### API Endpoints
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/api/email/status` | Provider status + DB stats + scan history |
+| `POST` | `/api/email/scan` | Trigger scan — dedup, classify, notify |
+| `GET` | `/api/email/search?q=...` | Instant local search (no API call) |
+| `POST` | `/api/email/notified` | Mark scanned emails as notified |
+| `POST` | `/api/email/cleanup` | Delete drafts / archive old (opt-in write mode) |
+
+#### Privacy & Security
+- Read-only by default (`read_only: true`)
+- Metadata only — no body content, no attachments, no sent mail
+- Credentials stored at `~/.config/email/` (outside repo)
+- Separate DB keeps email data isolated from core
+
+#### Tests
+- 43/43 unit tests pass
+- Real Gmail UAT: dedup confirmed (scan 1: 50 new; scan 2: 0 new, 50 seen)
+- Integration tests: module discovery, routes, handlers
+
+### Documentation
+- `docs/email-automation.md` — complete setup guide with architecture, API reference, config, troubleshooting
+- `README.md` updated with email automation API table + config example
+- `openclaw/skills/clark/SKILL.md` — agent rules, search/notified flow, dedup
+- `proposals/` — email-automation proposal + tracking design docs
+
+---
+
 ## v0.3.0 (2026-05-26)
 
 ### Agentic Architecture (Phase 1 + 2)

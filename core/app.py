@@ -69,7 +69,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         lifespan=_lifespan,
         title="clark",
-        version="0.6.0",
+        version="0.7.0",
         description="Ask clark. — AI agent backend API for menial tasks",
     )
 
@@ -78,7 +78,7 @@ def create_app() -> FastAPI:
     @app.get("/api/health")
     async def health():
         """Basic health check."""
-        return {"status": "ok", "service": "clark", "version": "0.6.0"}
+        return {"status": "ok", "service": "clark", "version": "0.7.0"}
 
     @app.get("/api/health/detailed")
     async def health_detailed():

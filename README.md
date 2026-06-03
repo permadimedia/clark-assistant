@@ -2,9 +2,9 @@
 
 > **Ask clark.** — AI agent backend API for menial tasks.
 
-Reminders · Notes · Agenda · Scheduler · Telegram notifications
+Reminders · Notes · Agenda · Scheduler · Email Automation · Telegram notifications
 
-**Version:** v0.6.0 | **Idle RAM:** ~100 MB | **Stack:** Python 3.11+ · FastAPI · SQLite · aiosqlite · httpx | **Platform:** Raspberry Pi
+**Version:** v0.7.0 | **Idle RAM:** ~100 MB | **Stack:** Python 3.11+ · FastAPI · SQLite · aiosqlite · httpx | **Platform:** Raspberry Pi
 
 ```
 Sangkuni: "Let me ask clark to create a reminder."
@@ -95,7 +95,7 @@ python cli.py start
 
 ```bash
 curl http://localhost:8124/api/health
-# → {"status":"ok","service":"clark","version":"0.6.0"}
+# → {"status":"ok","service":"clark","version":"0.7.0"}
 ```
 
 ### 5. Change config (no restart needed)
@@ -329,6 +329,18 @@ See [docs/agent-integration.md](docs/agent-integration.md) for the complete guid
 ---
 
 ## Changelog
+
+### v0.7.0 — Email Automation + Email Tracking DB
+- New email_automation module (Gmail API, metadata-only)
+- Email tracking database at `~/.clark/email.db` (separate from core)
+- Smart notifications: NEW vs OLDER UNREAD sections
+- Dedup by message_id — same email never notified twice
+- Local search endpoint (instant, no API call)
+- Improved classifier (trained on 50 real emails, ID/EN keywords)
+- Scan audit trail (email_scan_log table)
+- Mark-notified flow to prevent duplicates
+- Full documentation: setup guide, SKILL.md, README
+- 43/43 tests passing
 
 ### v0.6.0 — Renamed to clark
 - Project renamed from `ai-assistant-light` → `clark`
