@@ -1,6 +1,6 @@
 [project]
 name = "clark"
-version = "0.6.0"
+version = "0.7.0"
 description = "REST API backend for agentic AI — reminders, scheduler, notes, agenda"
 requires-python = ">=3.11"
 dependencies = [
