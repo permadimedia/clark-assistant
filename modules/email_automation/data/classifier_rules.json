@@ -1,0 +1,71 @@
+{
+  "_comment": "Email classifier rules — edit this file to customize detection without changing code.",
+
+  "social_domains": [
+    "facebook.com", "facebookmail.com", "fb.com", "fbmail.com",
+    "linkedin.com", "e.linkedin.com",
+    "twitter.com", "x.com",
+    "instagram.com", "tiktok.com", "youtube.com",
+    "github.com", "medium.com", "reddit.com", "pinterest.com"
+  ],
+
+  "priority_domains": {
+    "_comment": "Override classification by sender domain. Key: domain, Value: label_key"
+  },
+
+  "bulk_headers": [
+    "list-id",
+    "list-unsubscribe",
+    "x-mailer"
+  ],
+
+  "subject_rules": [
+    {
+      "category": "security",
+      "label_key": "priority_security",
+      "patterns": [
+        "password", "login", "2fa", "two.?factor", "security",
+        "suspicious", "verified", "authentication", "sign.?in",
+        "breach", "blocked", "unauthorized", "account.*alert",
+        "secure your account", "unusual sign"
+      ]
+    },
+    {
+      "category": "billing",
+      "label_key": "priority_billing",
+      "patterns": [
+        "invoice", "receipt", "payment", "bill", "subscription",
+        "billing", "transaction", "statement", "tagihan",
+        "paid", "payment confirm", "your.*receipt",
+        "automatic payment", "charge"
+      ]
+    },
+    {
+      "category": "user_account",
+      "label_key": "priority_user_account",
+      "patterns": [
+        "welcome", "registered", "verification", "verify",
+        "account", "sign.?up", "activation", "confirm",
+        "onboarding", "your account.*created",
+        "email.*confirm", "activate your"
+      ]
+    },
+    {
+      "category": "promo",
+      "label_key": "archive_promo",
+      "patterns": [
+        "promo", "discount", "sale", "offer", "deal",
+        "coupon", "save", "free", "limited time",
+        "shop now", "buy now", "exclusive"
+      ]
+    },
+    {
+      "category": "notifications",
+      "label_key": "archive_notifications",
+      "patterns": [
+        "notification", "alert", "update", "status",
+        "delivery", "tracking", "shipped", "out for delivery"
+      ]
+    }
+  ]
+}

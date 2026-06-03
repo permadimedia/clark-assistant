@@ -2,67 +2,83 @@
 
 Classification uses only metadata (from_email, subject, headers).
 No body content is ever accessed.
+
+Rules are loaded from data/classifier_rules.json — edit that file to
+customize detection without changing code.
 """
 
+import json
+import logging
 import re
+from pathlib import Path
 from typing import Optional
 
 from modules.email_automation.providers.base import EmailMessage
-from modules.email_automation.labels import LabelDef, LABELS
+from modules.email_automation.labels import LABELS, LabelDef
+
+logger = logging.getLogger(__name__)
+
+# ── Load rules from data file ──────────────────────────────
+
+_RULES_PATH = Path(__file__).resolve().parent / "data" / "classifier_rules.json"
+
+_rules: dict | None = None
 
 
-# ── Detection rules ────────────────────────────────────────
+def _load_rules() -> dict:
+    """Load rules from classifier_rules.json. Falls back to empty dict on error."""
+    global _rules
+    if _rules is not None:
+        return _rules
 
-# Priority: sender domain matches
-_PRIORITY_DOMAINS: dict[str, str] = {
-    # These are examples — users can customize via config
-}
+    try:
+        if _RULES_PATH.exists():
+            _rules = json.loads(_RULES_PATH.read_text())
+            logger.info("Loaded classifier rules from %s (%d subject rules, %d social domains)",
+                        _RULES_PATH,
+                        len(_rules.get("subject_rules", [])),
+                        len(_rules.get("social_domains", [])))
+        else:
+            logger.warning("Classifier rules file not found at %s, using empty defaults", _RULES_PATH)
+            _rules = {
+                "social_domains": [],
+                "priority_domains": {},
+                "bulk_headers": [],
+                "subject_rules": [],
+            }
+    except Exception as e:
+        logger.error("Failed to load classifier rules: %s", e)
+        _rules = {
+            "social_domains": [],
+            "priority_domains": {},
+            "bulk_headers": [],
+            "subject_rules": [],
+        }
 
-# Social media domains
-_SOCIAL_DOMAINS = [
-    "facebook.com", "facebookmail.com", "fb.com", "fbmail.com",
-    "linkedin.com", "e.linkedin.com",
-    "twitter.com", "x.com",
-    "instagram.com", "tiktok.com", "youtube.com",
-    "github.com", "medium.com", "reddit.com", "pinterest.com",
-]
+    return _rules
 
-# Bulk email headers
-_BULK_HEADERS = [
-    "list-id", "list-unsubscribe", "x-mailer",
-]
 
-# Subject keywords — grouped by category
-_SUBJECT_RULES: list[tuple[str, str, list[str]]] = [
-    # (category, label_key, keyword_patterns)
-    ("security", "priority_security", [
-        r"password", r"login", r"2fa", r"two.?factor", r"security",
-        r"suspicious", r"verified", r"authentication", r"sign.?in",
-        r"breach", r"blocked", r"unauthorized", r"account.*alert",
-        r"secure your account", r"unusual sign",
-    ]),
-    ("billing", "priority_billing", [
-        r"invoice", r"receipt", r"payment", r"bill", r"subscription",
-        r"billing", r"transaction", r"statement", r"tagihan",
-        r"paid", r"payment confirm", r"your.*receipt",
-        r"automatic payment", r"charge",
-    ]),
-    ("user_account", "priority_user_account", [
-        r"welcome", r"registered", r"verification", r"verify",
-        r"account", r"sign.?up", r"activation", r"confirm",
-        r"onboarding", r"your account.*created",
-        r"email.*confirm", r"activate your",
-    ]),
-    ("promo", "archive_promo", [
-        r"promo", r"discount", r"sale", r"offer", r"deal",
-        r"coupon", r"save", r"free", r"limited time",
-        r"shop now", r"buy now", r"exclusive",
-    ]),
-    ("notifications", "archive_notifications", [
-        r"notification", r"alert", r"update", r"status",
-        r"delivery", r"tracking", r"shipped", r"out for delivery",
-    ]),
-]
+def reload_rules() -> None:
+    """Force-reload rules from disk (useful after hot-edit)."""
+    global _rules
+    _rules = None
+    _load_rules()
+    logger.info("Classifier rules reloaded from %s", _RULES_PATH)
+
+
+def _social_domains() -> list[str]:
+    return _load_rules().get("social_domains", [])
+
+
+def _priority_domains() -> dict[str, str]:
+    return _load_rules().get("priority_domains", {})
+
+
+def _subject_rules() -> list[dict]:
+    return _load_rules().get("subject_rules", [])
+
+
+# ── Core classification ────────────────────────────────────
 
 
 def classify(message: EmailMessage) -> Optional[str]:
@@ -78,36 +94,32 @@ def classify(message: EmailMessage) -> Optional[str]:
     domain = message.domain
 
     # 1. Social domain check (fastest)
-    for soc_domain in _SOCIAL_DOMAINS:
+    for soc_domain in _social_domains():
         if soc_domain in domain:
             return "archive_social"
 
     # 2. Priority domain overrides
-    if domain in _PRIORITY_DOMAINS:
-        return _PRIORITY_DOMAINS[domain]
+    if domain in _priority_domains():
+        return _priority_domains()[domain]
 
     # 3. Followup detection (reply needed)
     if re.match(r"^re:", subject_lower, re.IGNORECASE):
-        # Check if from a known contact (not bulk)
         if not message.is_bulk:
             return "followup"
 
     # 4. Subject keyword matching
-    best_match = None
-    for category, label_key, patterns in _SUBJECT_RULES:
+    for rule in _subject_rules():
+        label_key = rule.get("label_key", "")
+        patterns = rule.get("patterns", [])
         for pattern in patterns:
-            if re.search(pattern, subject_lower, re.IGNORECASE):
-                best_match = label_key
-                break
-        if best_match:
-            break
+            try:
+                if re.search(pattern, subject_lower, re.IGNORECASE):
+                    return label_key
+            except re.error:
+                logger.warning("Invalid regex pattern: '%s' in rule '%s'", pattern, label_key)
+                continue
 
-    if best_match:
-        return best_match
-
-    # 5. Bulk/newsletter header detection
-    # (headers not available in EmailMessage yet — Phase 2 refinement)
-    # For now, fallback to domain-based bulk detection
+    # 5. Bulk sender fallback
     if message.is_bulk:
         return "archive_notifications"
 
