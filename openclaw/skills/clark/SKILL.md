@@ -154,11 +154,56 @@ DELETE /api/scheduler/jobs/{id}
 - `send_message` → send arbitrary text via Telegram
 - `send_agenda` → send agenda summary via Telegram
 - `reminder_alert` → fire a stored reminder (auto-created by POST /api/reminders)
+- `email_daily_scan` → scan inbox, classify, and notify (see Email Automation below)
 
 **Schedule types:**
 - `cron` → `{"cron": "0 6 * * *", "tz": "Asia/Jakarta"}`
 - `once` → `{"at": "2026-06-02T09:00:00+07:00"}`
 - `interval` → `{"interval_minutes": 30}`
+
+### Email Automation (Gmail / IMAP)
+
+Email module reads **only metadata** (from, subject, date, snippet).
+No body content, no attachments, no sent messages.
+
+```bash
+# Check connection & last scan status
+GET /api/email/status
+
+# Trigger instant scan → classify → notify Telegram
+POST /api/email/scan
+
+# Execute cleanup: archive old emails, delete old drafts
+POST /api/email/cleanup
+```
+
+**Example — user asks about specific emails:**
+```bash
+# Agent calls /scan to get latest data
+curl -X POST http://localhost:8124/api/email/scan
+# → Returns summary + notification text
+# Agent filters by sender/subject in the response
+```
+
+**Agent rules for email:**
+1. Always call `/api/email/scan` fresh when user asks about email — don't rely on cached data.
+2. Filter results by sender or subject in the response, don't re-read raw JSON.
+3. Respect read-only mode: don't offer cleanup/delete unless user explicitly asks.
+4. Default scope is `gmail.metadata` — no body content available.
+
+**Daily scheduled scan:**
+```bash
+# Register once (persists in DB):
+curl -X POST http://localhost:8124/api/scheduler/jobs \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Email Daily Scan","job_type":"email_daily_scan","schedule_type":"cron","schedule_config":{"cron":"0 11 * * *","tz":"Asia/Jakarta"},"payload":{"chat_id":123456789,"scan_limit":50}}'
+```
+
+**Safety rules for agent:**
+- **Never** read or expose full email body content (not available anyway)
+- **Never** commit email credentials or tokens to git
+- Credentials live at `~/.config/email/` outside repo
+- Cleanup actions (`/cleanup`) only if user explicitly asks
 
 ### Config & Health
 
@@ -177,6 +222,44 @@ python cli.py make module --name weather --desc "Forecast" --with-handler
 
 # Or API (server required):
 POST /api/modules/scaffold   {"name": "weather"}
+```
+
+## Module-Specific Behaviors
+
+### Email Automation
+
+The `email_automation` module scans Gmail inbox metadata and sends a
+smart daily notification to Telegram. It also supports on-demand queries
+when the user asks about specific emails.
+
+**Provider-agnostic:** Current implementation uses Gmail API with `gmail.metadata`
+scope. Future: IMAP, Outlook Graph, Proton Bridge.
+
+**Label strategy (when write mode is enabled):**
+
+| Priority (visible in inbox) | Archive (skip inbox) |
+|---------------------------|---------------------|
+| `!Priority/Security` | `_Archive/Promo` |
+| `!Priority/Billing` | `_Archive/Newsletter` |
+| `!Priority/User-Account` | `_Archive/Social` |
+| `!Followup` | `_Archive/Notifications` |
+
+**Config in `clark.json`:**
+```json
+{
+  "modules": {
+    "email_automation": {
+      "enabled": true,
+      "provider": "gmail",
+      "credentials_path": "~/.config/email/credentials.json",
+      "token_path": "~/.config/email/token.json",
+      "scan_schedule": "0 11 * * *",
+      "scan_limit": 50,
+      "chat_id": 0,
+      "read_only": true
+    }
+  }
+}
 ```
 
 ## Reminder Format

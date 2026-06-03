@@ -24,7 +24,17 @@ archiving, trashing) require explicit opt-in via `read_only: false` in config.
 3. Navigate to **APIs & Services → Library**
 4. Search for **Gmail API** → Enable
 
-### Step 2: Create OAuth 2.0 Credentials
+### Step 2: Add Test User (App in Testing Mode)
+
+Since the app is in **Testing** status (not published), you need to add your
+Gmail address as a test user:
+
+1. **APIs & Services → OAuth consent screen**
+2. Set User Type: **External**
+3. Fill required fields (app name, support email, developer contact)
+4. **Add Test Users** → add your Gmail address
+
+### Step 3: Create OAuth 2.0 Credentials
 
 1. **APIs & Services → Credentials**
 2. Click **Create Credentials → OAuth Client ID**
