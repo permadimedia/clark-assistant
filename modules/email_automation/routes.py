@@ -44,9 +44,8 @@ def _get_engine(request: Request):
     """Resolve email engine from app state or module manager."""
     module = getattr(request.app.state, "email_automation_module", None)
     if module is None:
-        # Fallback: scan through modules
-        from core.app import get_module_manager
-        mgr = get_module_manager(request.app)
+        # Fallback: find module from module_manager
+        mgr = getattr(request.app.state, "module_manager", None)
         module = mgr.get("email_automation") if mgr else None
     if module is None:
         raise HTTPException(status_code=503, detail="EmailAutomation module not loaded")
@@ -77,8 +76,6 @@ async def email_status(request: Request):
 async def trigger_scan(request: Request):
     """Trigger an inbox scan immediately. Returns classification results."""
     engine = _get_engine(request)
-    if engine.provider is None:
-        raise HTTPException(status_code=503, detail="Provider not connected")
 
     try:
         result = await engine.scan()
@@ -105,7 +102,7 @@ async def trigger_cleanup(request: Request):
     if engine.read_only:
         raise HTTPException(status_code=403, detail="Read-only mode — set read_only=false in clark.json to enable cleanup")
 
-    if engine.provider is None:
+    if engine.provider is None and not await engine.connect():
         raise HTTPException(status_code=503, detail="Provider not connected")
 
     try:

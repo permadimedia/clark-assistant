@@ -10,20 +10,30 @@ logger = logging.getLogger(__name__)
 
 
 async def handle_daily_scan(job: CronJob) -> str:
-    """Daily inbox scan — fetch metadata, classify, label, and notify.
+    """Daily inbox scan — fetch metadata, classify, and notify.
 
     Registered as job_type='email_daily_scan' in HANDLER_MAP.
-    Triggered by Clark's Scheduler (default: 07:00 WIB daily).
-
-    Returns a summary string for the scheduler job log.
+    Triggered by Clark's Scheduler (default: 11:00 WIB daily).
     """
-    # Resolve the email engine from the job's app context
-    # (job has no direct app ref; we import the module manager lazily)
     try:
-        from core.app import get_app, get_module_manager
-        app = get_app()
-        mgr = get_module_manager(app)
-        module = mgr.get("email_automation") if mgr else None
+        # Resolve app state via scheduler's internal reference
+        from core.scheduler import SchedulerManager
+
+        app = getattr(job, "_app", None)
+        if app is None:
+            # Fallback: find running FastAPI instance
+            import sys
+            for mod_name, mod in sys.modules.items():
+                if hasattr(mod, "app"):
+                    candidate = getattr(mod, "app", None)
+                    if candidate and "FastAPI" in type(candidate).__name__:
+                        app = candidate
+                        break
+
+        if app is None or not hasattr(app, "state"):
+            return "No FastAPI app reference available"
+
+        module = getattr(app.state, "email_automation_module", None)
         if module is None:
             return "EmailAutomation module not loaded"
 

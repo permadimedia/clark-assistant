@@ -35,6 +35,7 @@ class EmailAutomationModule(Module):
 
     def __init__(self):
         self._engine = None
+        self._app = None
 
     @property
     def engine(self):
@@ -43,6 +44,10 @@ class EmailAutomationModule(Module):
     async def on_load(self, app) -> None:
         """Initialize email engine on module load."""
         from modules.email_automation.engine import EmailEngine
+
+        self._app = app
+        # Register module reference for handler/route access
+        app.state.email_automation_module = self
 
         merged = self.config
         self._engine = EmailEngine(
