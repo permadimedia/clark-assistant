@@ -1,7 +1,7 @@
 # Clark — The AI's Desk Clerk
 
 > **Tagline:** *Ask clark.*
-> **Version:** v0.6.0 → v0.7.0
+> **Version:** v0.7.0
 > **Identity:** API backend that handles menial tasks so AI agents can focus on what matters.
 
 ```
@@ -63,7 +63,7 @@ See [docs/coding-philosophy.md](docs/coding-philosophy.md) for full details.
 
 ---
 
-## Current State (v0.6.0)
+## Current State (v0.7.0)
 
 ### Working
 
@@ -77,6 +77,7 @@ See [docs/coding-philosophy.md](docs/coding-philosophy.md) for full details.
 | Module system | Base class + discovery + lifecycle | Module enable/disable |
 | Daily agenda jobs | #5 06:00 (today), #6 16:00 (tomorrow) | Schedule time, range |
 | Hot reload | `POST /api/reload` | — |
+| Email Automation | `GET/POST /api/email/*` (5 endpoints) | Provider, credentials, scan schedule, read_only, db_path |
 | Health check | `GET /api/health`, `GET /api/health/detailed` | — |
 
 ### Running On
@@ -91,7 +92,7 @@ See [docs/coding-philosophy.md](docs/coding-philosophy.md) for full details.
 
 ## Roadmap
 
-### ✓ v0.6.0 — Foundation
+### ✓ v0.7.0 — 10+ endpoints for job CRUD
 - [x] Strip LLM layer
 - [x] Build scheduler engine
 - [x] Create daily agenda jobs
@@ -260,7 +261,7 @@ uv run uvicorn app:app --host 127.0.0.1 --port 8124
 
 # Verify
 curl http://localhost:8124/api/health
-# → {"status":"ok","service":"clark","version":"0.6.0"}
+# → {"status":"ok","service":"clark","version":"0.7.0"}
 ```
 
 ## Scaffold a Module

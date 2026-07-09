@@ -154,11 +154,86 @@ DELETE /api/scheduler/jobs/{id}
 - `send_message` → send arbitrary text via Telegram
 - `send_agenda` → send agenda summary via Telegram
 - `reminder_alert` → fire a stored reminder (auto-created by POST /api/reminders)
+- `email_daily_scan` → scan inbox, classify, and notify (see Email Automation below)
 
 **Schedule types:**
 - `cron` → `{"cron": "0 6 * * *", "tz": "Asia/Jakarta"}`
 - `once` → `{"at": "2026-06-02T09:00:00+07:00"}`
 - `interval` → `{"interval_minutes": 30}`
+
+### Email Automation (Gmail / IMAP)
+
+Email module reads **only metadata** (from, subject, date, snippet).
+No body content, no attachments, no sent messages.
+
+```bash
+# Check connection + DB stats + recent scan history
+GET /api/email/status
+
+# Trigger scan → classify → dedup → store → notify Telegram
+POST /api/email/scan
+
+# Search tracked emails instantly (local DB, no API call)
+GET /api/email/search?q=keyword
+
+# Mark pending new items as notified (call after presenting)
+POST /api/email/notified
+
+# Execute cleanup: archive old emails, delete old drafts
+POST /api/email/cleanup
+```
+
+**Agent rules for email:**
+1. **New items only**: After `POST /api/email/scan`, the summary shows only first-seen items in 🆕 NEW section. Older unread items appear in 📌 OLDER UNREAD section.
+2. **Mark notified**: Call `POST /api/email/notified` after presenting results so duplicates don't appear next scan.
+3. **Use local search**: For targeted queries about specific senders, use `GET /api/email/search?q=keyword` — instant, no API call.
+4. Respect read-only mode: don't offer cleanup/delete unless user explicitly asks.
+5. Default scope is `gmail.metadata` — no body content available.
+6. **Never** commit email credentials or tokens to git — credentials live at `~/.config/email/`.
+
+**Approved reporting format (Telegram-friendly):**
+
+When user asks about specific emails, use the search endpoint and present results:
+
+```
+📬 Email Query — [Search Keyword]
+
+🏢 [Company Name] — N email found
+
+• Sender Name
+  Subject line in full, never truncated
+  📅 Day Date, Time
+
+• Sender Name
+  Subject line in full, never truncated
+  📅 Day Date, Time
+
+💻 Another Company — No results
+```
+
+Rules for the report:
+- **No markdown tables** — use bullet lists with indentation
+- **No code blocks** for the email content — plain text
+- **Sender name** italic or plain, never bold
+- **Subject** full, never truncated
+- Group by sender/domain when multiple emails from same source
+- Use emoji sparingly: 📬 header, 🏦 finance, 💻 tech, 🏢 company, 📅 date
+- If no results: "[Keyword] — No results" — simple, no fuss
+- **Never use real user data** in the template — use generic placeholders (e.g. "Sender Name", "Company Name")
+
+**Daily scheduled scan:**
+```bash
+# Register once (persists in DB):
+curl -X POST http://localhost:8124/api/scheduler/jobs \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Email Daily Scan","job_type":"email_daily_scan","schedule_type":"cron","schedule_config":{"cron":"0 11 * * *","tz":"Asia/Jakarta"},"payload":{"chat_id":123456789,"scan_limit":50}}'
+```
+
+**Safety rules for agent:**
+- **Never** read or expose full email body content (not available anyway)
+- **Never** commit email credentials or tokens to git
+- Credentials live at `~/.config/email/` outside repo
+- Cleanup actions (`/cleanup`) only if user explicitly asks
 
 ### Config & Health
 
@@ -177,6 +252,51 @@ python cli.py make module --name weather --desc "Forecast" --with-handler
 
 # Or API (server required):
 POST /api/modules/scaffold   {"name": "weather"}
+```
+
+## Module-Specific Behaviors
+
+### Email Automation
+
+The `email_automation` module scans Gmail inbox metadata and sends a
+smart daily notification to Telegram. It also supports on-demand queries
+when the user asks about specific emails.
+
+**Provider-agnostic:** Current implementation uses Gmail API with `gmail.metadata`
+scope. Future: IMAP, Outlook Graph, Proton Bridge.
+
+**Email tracking:**
+- Separate SQLite database at `~/.clark/email.db` (not coupled to core clark DB)
+- Dedup by `message_id`: first scan = new; subsequent scans = seen
+- Scan audit trail in `email_scan_log` table (duration, counts, errors)
+- Local search queries this DB — instant results, no API call
+
+**Label strategy (when write mode is enabled):**
+
+| Priority (visible in inbox) | Archive (skip inbox) |
+|---------------------------|---------------------|
+| `!Priority/Security` | `_Archive/Promo` |
+| `!Priority/Billing` | `_Archive/Newsletter` |
+| `!Priority/User-Account` | `_Archive/Social` |
+| `!Followup` | `_Archive/Notifications` |
+
+**Config in `clark.json`:**
+```json
+{
+  "modules": {
+    "email_automation": {
+      "enabled": true,
+      "provider": "gmail",
+      "credentials_path": "~/.config/email/credentials.json",
+      "token_path": "~/.config/email/token.json",
+      "db_path": "~/.clark/email.db",
+      "scan_schedule": "0 11 * * *",
+      "scan_limit": 50,
+      "chat_id": 0,
+      "read_only": true
+    }
+  }
+}
 ```
 
 ## Reminder Format

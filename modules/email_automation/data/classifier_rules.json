@@ -1,0 +1,87 @@
+{
+  "_comment": "Email classifier rules — edit this file to customize detection without changing code.\nBased on real inbox analysis of 50 emails (Jun 2026).",
+
+  "social_domains": [
+    "facebook.com", "facebookmail.com", "fb.com", "fbmail.com",
+    "linkedin.com", "e.linkedin.com",
+    "twitter.com", "x.com",
+    "instagram.com", "tiktok.com", "youtube.com",
+    "reddit.com", "pinterest.com"
+  ],
+
+  "priority_domains": {
+    "_comment": "Override classification by sender domain. Key: domain, Value: label_key",
+    "github.com": "archive_notifications",
+    "medium.com": "archive_newsletter"
+  },
+
+  "bulk_headers": [
+    "list-id",
+    "list-unsubscribe",
+    "x-mailer",
+    "x-mailgun"
+  ],
+
+  "subject_rules": [
+    {
+      "category": "security",
+      "label_key": "priority_security",
+      "patterns": [
+        "password", "password diubah", "kode verifikasi",
+        "login", "2fa", "two.?factor", "security",
+        "suspicious", "verified", "authentication", "sign.?in",
+        "breach", "blocked", "unauthorized", "account.*alert",
+        "secure your account", "unusual sign",
+        "token.*added", "token.*has been added",
+        "recovery code", "recovery codes",
+        "penyesuaian limit"
+      ]
+    },
+    {
+      "category": "billing",
+      "label_key": "priority_billing",
+      "patterns": [
+        "invoice", "receipt", "payment", "bill", "subscription",
+        "billing", "transaction", "statement", "tagihan",
+        "paid", "payment confirm", "your.*receipt",
+        "automatic payment", "charge",
+        "pembayaran", "payment to",
+        "transfer", "transfer.*berhasil", "berhasil",
+        "faktur pajak", "tax invoice"
+      ]
+    },
+    {
+      "category": "user_account",
+      "label_key": "priority_user_account",
+      "patterns": [
+        "welcome", "registered", "verification", "verify",
+        "account", "sign.?up", "activation", "confirm",
+        "onboarding", "your account.*created",
+        "email.*confirm", "activate your",
+        "invited you", "invitation",
+        "pengkinian data"
+      ]
+    },
+    {
+      "category": "promo",
+      "label_key": "archive_promo",
+      "patterns": [
+        "promo", "discount", "diskon", "sale", "offer", "deal",
+        "coupon", "voucher", "save", "hemat", "free", "gratis",
+        "limited time", "last chance", "cashback",
+        "shop now", "buy now", "exclusive",
+        "hore", "potongan", "diskon s.d"
+      ]
+    },
+    {
+      "category": "notifications",
+      "label_key": "archive_notifications",
+      "patterns": [
+        "notification", "alert", "update", "status",
+        "delivery", "tracking", "shipped", "out for delivery",
+        "ringkasan", "jadwal", "program", "konfirmasi",
+        "pengkinian data"
+      ]
+    }
+  ]
+}

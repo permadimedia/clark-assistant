@@ -2,9 +2,9 @@
 
 > **Ask clark.** — AI agent backend API for menial tasks.
 
-Reminders · Notes · Agenda · Scheduler · Telegram notifications
+Reminders · Notes · Agenda · Scheduler · Email Automation · Telegram notifications
 
-**Version:** v0.6.0 | **Idle RAM:** ~100 MB | **Stack:** Python 3.11+ · FastAPI · SQLite · aiosqlite · httpx | **Platform:** Raspberry Pi
+**Version:** v0.7.0 | **Idle RAM:** ~100 MB | **Stack:** Python 3.11+ · FastAPI · SQLite · aiosqlite · httpx | **Platform:** Raspberry Pi
 
 ```
 Sangkuni: "Let me ask clark to create a reminder."
@@ -35,6 +35,7 @@ Clark is your AI's desk clerk — a REST API backend that handles menial tasks s
 | **Scheduler** | Cron/interval/once jobs — `send_message`, `send_agenda`, extensible |
 | **Notifier** | Sends Telegram messages via Bot API |
 | **Module system** | Self-contained feature modules with auto-discovery |
+| **Email Automation** | Scan Gmail metadata, classify, dedup, notify via Telegram (read-only by default) |
 
 ### What It Is NOT
 
@@ -94,7 +95,7 @@ python cli.py start
 
 ```bash
 curl http://localhost:8124/api/health
-# → {"status":"ok","service":"clark","version":"0.6.0"}
+# → {"status":"ok","service":"clark","version":"0.7.0"}
 ```
 
 ### 5. Change config (no restart needed)
@@ -151,6 +152,37 @@ curl -X POST http://localhost:8124/api/reminders \
 | `GET` | `/api/notes/:id` | Get note |
 | `PUT` | `/api/notes/:id` | Update note |
 | `DELETE` | `/api/notes/:id` | Delete note |
+
+### Email Automation
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/api/email/status` | Provider status + DB stats + scan history |
+| `POST` | `/api/email/scan` | Trigger scan — dedup, classify, notify |
+| `GET` | `/api/email/search?q=...` | Instant local search (no API call) |
+| `POST` | `/api/email/notified` | Mark scanned emails as notified |
+| `POST` | `/api/email/cleanup` | Delete drafts / archive old (opt-in write mode) |
+
+```bash
+# Scan
+curl -X POST http://localhost:8124/api/email/scan
+
+# Search (local DB, instant)
+curl http://localhost:8124/api/email/search?q=jago
+
+# Status with stats
+curl http://localhost:8124/api/email/status
+```
+
+Features:
+- **Provider-agnostic**: Gmail + extensible to IMAP/Outlook
+- **Privacy-first**: metadata only (from, subject, date, snippet) — never body content
+- **Email tracking DB**: `~/.clark/email.db` — dedup against previous scans
+- **Smart notifications**: only new (first-seen) items surfaced; older unread in separate section
+- **Priority ordering**: security > billing > account > followup > archive
+- **Local search**: query tracked emails instantly without API calls
+- **Scan audit**: every scan logged with counts, duration, errors
+- **Improved classifier**: trained on real inbox data (50 sample), Indonesian keyword support
 
 ### Scheduler (Cron Jobs)
 
@@ -222,7 +254,18 @@ All config lives in a single JSON file. No `.env`.
     "notes": { "enabled": true },
     "agenda": { "enabled": true },
     "scheduler": { "enabled": true },
-    "uptime": { "enabled": true }
+    "uptime": { "enabled": true },
+    "email_automation": {
+      "enabled": false,
+      "provider": "gmail",
+      "credentials_path": "~/.config/email/credentials.json",
+      "token_path": "~/.config/email/token.json",
+      "db_path": "~/.clark/email.db",
+      "scan_schedule": "0 7 * * *",
+      "scan_limit": 50,
+      "chat_id": 123456789,
+      "read_only": true
+    }
   }
 }
 ```
@@ -286,6 +329,18 @@ See [docs/agent-integration.md](docs/agent-integration.md) for the complete guid
 ---
 
 ## Changelog
+
+### v0.7.0 — Email Automation + Email Tracking DB
+- New email_automation module (Gmail API, metadata-only)
+- Email tracking database at `~/.clark/email.db` (separate from core)
+- Smart notifications: NEW vs OLDER UNREAD sections
+- Dedup by message_id — same email never notified twice
+- Local search endpoint (instant, no API call)
+- Improved classifier (trained on 50 real emails, ID/EN keywords)
+- Scan audit trail (email_scan_log table)
+- Mark-notified flow to prevent duplicates
+- Full documentation: setup guide, SKILL.md, README
+- 43/43 tests passing
 
 ### v0.6.0 — Renamed to clark
 - Project renamed from `ai-assistant-light` → `clark`

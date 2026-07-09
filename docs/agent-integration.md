@@ -49,7 +49,7 @@ On **every agent wakeup** (session start, heartbeat, or restart):
 
 # Step 3: Verify healthy before calling APIs
 curl -sf http://localhost:8124/api/health
-# → {"status":"ok","service":"clark","version":"0.6.0"}
+# → {"status":"ok","service":"clark","version":"0.7.0"}
 ```
 
 Or via CLI (same thing):
